@@ -1,0 +1,16 @@
+# conf/config.yaml
+defaults:
+  - model: llama
+  - dataset: defaults
+  - wandb: defaults
+  - override hydra/job_logging: colorlog
+  - override hydra/hydra_logging: colorlog
+
+hydra:
+  run:
+    dir: outputs/${now:%H:%M_%d-%m}_${model.model_name_short}
+
+subset: ""
+sys_prompt_path: "sys_prompts/default.txt"
+output_file_path: outputs/${now:%H:%M_%d-%m}_${model.model_name_short}/results.csv
+template_name: "generate_python_code_conv.j2"
