@@ -4,3 +4,4 @@ model_name_short: "llama3.1-8B-Instruct"
 gpu_memory_utilization: 0.95
 temperature: 0
 max_tokens: 1000
+top_p: 0.95

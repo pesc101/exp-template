@@ -42,5 +42,5 @@ docker/qdrant/qdrant_store
 
 # Ignore Output files
 outputs/*
-wandb
+wandb/*
 ## Test Notebooks & Python files

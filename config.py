@@ -11,9 +11,11 @@ class Model:
     top_p: float = 0.95
     seed: int | None = None
 
+
 @dataclass
 class Dataset:
     name: str
+
 
 @dataclass
 class WandB:

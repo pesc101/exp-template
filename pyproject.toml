@@ -1,0 +1,15 @@
+[project]
+name = "exp-template"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "encourage",
+    "hydra-core>=1.3.2",
+    "vllm>=0.6.2",
+    "wandb>=0.18.5",
+]
+
+[tool.uv.sources]
+encourage = { path = "../encourage" }

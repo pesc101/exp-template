@@ -1,0 +1,7 @@
+---
+project: exp_template
+entity: jstrich
+mode: online
+watch:
+  log: all
+  log_freq: 100
