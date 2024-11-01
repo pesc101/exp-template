@@ -40,4 +40,4 @@ lint.ignore = [
 ]
 
 [tool.uv.sources]
-encourage = { git = "ssh://git@git.dida.do/dida/encourage.git", branch = "main" }
+encourage = { git = "ssh://git@github.com:uhh-hcds/encourage.git", branch = "main" }
