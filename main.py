@@ -78,8 +78,8 @@ def main(cfg: Config) -> None:
                 last_user_content = item["content"]
         last_user_contents.append(last_user_content)
 
-    context = [{"context": ctx[0]} for ctx in dataset.ctxs]
-    meta_data = [{"answers": ctx} for ctx in dataset.answers]
+    context = [{"context": ctx[0]["text"]} for ctx in dataset.ctxs]
+    meta_data = [{"answers": answer[0]} for answer in dataset.answers]
 
     prompt_collection = PromptCollection.create_prompts(
         sys_prompts,
