@@ -1,4 +1,4 @@
 dataset_path: nvidia/ChatRAG-Bench
-dataset_name: coqa
+dataset_name: inscit
 split: dev
-max_samples: 1
+max_samples: 2

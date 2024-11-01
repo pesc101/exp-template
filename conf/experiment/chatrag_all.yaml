@@ -1,0 +1,5 @@
+# @package _global_
+hydra:
+  sweeper:
+    params:
+      dataset: chatrag_coqa,chatrag_doc2dial,chatrag_doqa_cooking,chatrag_doqa_movies,chatrag_doqa_travel,chatrag_hybridial,chatrag_inscit,chatrag_qrecc,chatrag_quac,chatrag_sqa,chatrag_topiocqa

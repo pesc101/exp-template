@@ -1,5 +1,5 @@
 ---
-project: exp_template
+project: rag-eval
 entity: jstrich
 mode: online
 watch:

@@ -9,6 +9,7 @@ defaults:
   - wandb: defaults
 
 subset: ""
-sys_prompt_path: "sys_prompts/default.txt"
+sys_prompt_path: "prompt/sys_prompts/default.txt"
 output_file_path: outputs/${now:%H:%M_%d-%m}_${model.model_name_short}/inference_log.json
 template_name: prompt/test_template.j2
+debug: True

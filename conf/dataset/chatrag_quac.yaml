@@ -1,0 +1,4 @@
+dataset_path: nvidia/ChatRAG-Bench
+dataset_name: quac
+split: test
+max_samples: 2
