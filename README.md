@@ -1,6 +1,6 @@
-# 🧪 Experiment Template
+# 🧪 RAG Eval
 
-This repository is a template for running experiments using the following tools and libraries:
+This repository compares different RAG methods. It uses following tools and libraries to make it easier to run experiments and compare results:
 
 - 📦 **[uv](https://github.com/astral-sh/uv)**
   - A Python package manager replacing `pip` and `poetry`.
@@ -39,10 +39,10 @@ There you have to enter your API key which you can find in your account settings
 
 When using this template you have to declare all your configuration parameters in the `conf/defaults.yaml` file. Also modify the `conf/model/defaults.yaml` and `conf/data/defaults.yaml` files to fit your needs.
 
-To run an experiment you can use the following command:
+To run an experiment you can use the following command. The parameter follow the hydra syntax.
 
 ```bash
-uv run main.py
+uv run main.py +experiment=experiment_name
 ```
 
 The output will be saved in the outputs folder. Each experiment generates a new timestamped folder containing:
@@ -50,4 +50,3 @@ The output will be saved in the outputs folder. Each experiment generates a new 
 - Configuration files (.hydra/)
 - Logs (main.log)
 - Inference output (inference_log.json)
-
