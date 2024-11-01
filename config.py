@@ -14,7 +14,10 @@ class Model:
 
 @dataclass
 class Dataset:
-    name: str
+    dataset_path: str
+    dataset_name: str
+    split: str
+    max_samples: int
 
 
 @dataclass
@@ -26,8 +29,9 @@ class WandB:
 
 @dataclass
 class Config:
+    debug: bool
     model: Model
-    datset: Dataset
+    dataset: Dataset
     wandb: WandB
     sys_prompt_path: str
     tools_file_path: str
