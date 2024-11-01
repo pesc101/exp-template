@@ -65,8 +65,6 @@ def main(cfg: Config) -> None:
         cfg.dataset.split,
         cfg.dataset.max_samples,
     )
-    print(cfg.dataset.max_samples)
-    print(len(dataset))
     sys_prompts = FileManager(cfg.sys_prompt_path).read()
 
     # Collect last "content" for "user" from each sublist
