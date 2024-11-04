@@ -1,11 +1,11 @@
+"""Main script to run the evaluation pipeline."""
+
 import datetime
 import logging
 import os
-from pathlib import Path
 
 import hydra
 import omegaconf
-from dotenv import load_dotenv
 from encourage.llm.inference_runner import (
     BatchInferenceRunner,
     ChatInferenceRunner,
@@ -47,7 +47,7 @@ def get_inference_runner(cfg: Config, sampling_params: SamplingParams, batch: bo
 
 @hydra.main(version_base=None, config_path="conf", config_name="defaults")
 def main(cfg: Config) -> None:
-    load_dotenv(dotenv_path=Path("../.env"))
+    """Main function to run the evaluation pipeline."""
     if not cfg.debug:
         logger.setLevel(logging.DEBUG)
         run = wandb.init(
@@ -84,7 +84,7 @@ def main(cfg: Config) -> None:
         user_prompts=last_user_contents,
         contexts=context,
         meta_datas=meta_data,
-        template_name="prompt/llama3.1_rag.j2",
+        template_name=cfg.template_name,
     )
 
     ## Init Model and Run Inference
