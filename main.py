@@ -2,16 +2,12 @@
 
 import datetime
 import logging
-import os
 
 import hydra
 import omegaconf
-from encourage.llm.inference_runner import (
-    BatchInferenceRunner,
-    ChatInferenceRunner,
-    OpenAIChatInferenceRunner,
-)
-from encourage.prompts.prompt_collection import PromptCollection
+from encourage.llm import BatchInferenceRunner
+from encourage.metrics import BLEU, ROUGE, GeneratedAnswerLength, ReferenceAnswerLength
+from encourage.prompts import PromptCollection
 from encourage.utils.file_manager import FileManager
 from hydra.core.config_store import ConfigStore
 from vllm import LLM, SamplingParams
@@ -26,23 +22,6 @@ cs.store(name="rag-eval", node=Config)
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
-
-
-def get_inference_runner(cfg: Config, sampling_params: SamplingParams, batch: bool = False):
-    """Return appropriate inference runner based on the model name."""
-    if cfg.model.model_name.startswith("gpt"):
-        api_key = os.getenv("OPENAI_API_KEY")
-        return OpenAIChatInferenceRunner(sampling_params, cfg.model.model_name, api_key)
-
-    llm = LLM(
-        model=cfg.model.model_name,
-        gpu_memory_utilization=cfg.model.gpu_memory_utilization,
-    )
-
-    if batch:
-        return BatchInferenceRunner(llm, sampling_params)
-
-    return ChatInferenceRunner(llm, sampling_params)
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="defaults")
@@ -76,8 +55,8 @@ def main(cfg: Config) -> None:
                 last_user_content = item["content"]
         last_user_contents.append(last_user_content)
 
-    context = [{"context": ctx[0]["text"]} for ctx in dataset.ctxs]
-    meta_data = [{"answers": answer[0]} for answer in dataset.answers]
+    context = [{"contexts": {"content": ctx[0]["text"]}} for ctx in dataset.ctxs]
+    meta_data = [{"reference_answer": answer[0]} for answer in dataset.answers]
 
     prompt_collection = PromptCollection.create_prompts(
         sys_prompts,
@@ -94,10 +73,37 @@ def main(cfg: Config) -> None:
         top_p=cfg.model.top_p,
     )
 
-    runner = get_inference_runner(cfg, sampling_params, batch=True)
+    llm = LLM(
+        model=cfg.model.model_name,
+        gpu_memory_utilization=cfg.model.gpu_memory_utilization,
+    )
+    runner = BatchInferenceRunner(llm, sampling_params)
+
     responses = runner.run(prompt_collection)
     json_dump = [response.to_dict() for response in responses.response_data]
     FileManager(cfg.output_file_path).dump_json(json_dump)
+
+    metrics = [
+        GeneratedAnswerLength(),
+        ReferenceAnswerLength(),
+        # ContextLength(),
+        BLEU(),
+        ROUGE(rouge_type="rouge1"),
+        ROUGE(rouge_type="rouge2"),
+        ROUGE(rouge_type="rougeLsum"),
+        # ContextPrecision(runner=runner),
+        # ContextRecall(runner=runner),
+    ]
+
+    results = {}
+    for metric in metrics:
+        print(f"Calculate {metric}")
+        results[metric.name] = metric(responses)
+
+    print("=" * 30 + "\n" + "Evaluation report" + "\n" + "=" * 30)
+    for metric_name, metric_value in results.items():
+        print(f"{metric_name}: {metric_value.score}")
+        wandb.log({metric_name: metric_value.score})
 
     if not cfg.debug:
         run.finish()
