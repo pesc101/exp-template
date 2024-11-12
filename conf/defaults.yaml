@@ -1,7 +1,7 @@
 # conf/config.yaml
 hydra:
   run:
-    dir: outputs/${now:%H:%M_%d-%m}_${model.model_name_short}
+    dir: outputs/${now:%y-%m-%d_%H:%M}_${model.model_name_short}
 
 defaults:
   - model: llama
@@ -9,6 +9,6 @@ defaults:
   - wandb: defaults
 
 subset: ""
-sys_prompt_path: "sys_prompts/default.txt"
-output_file_path: outputs/${now:%H:%M_%d-%m}_${model.model_name_short}/inference_log.json
-template_name: prompt/test_template.j2
+sys_prompt_path: "prompts/sys_prompts/default.txt"
+output_file_path: outputs/${now:%H:%M_%d-%m}_${model.model_name_short}
+template_name: prompts/test_template.j2

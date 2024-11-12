@@ -6,12 +6,9 @@ from pathlib import Path
 import hydra
 import omegaconf
 from dotenv import load_dotenv
-from encourage.llm.inference_runner import (
-    ChatInferenceRunner,
-    OpenAIChatInferenceRunner,
-)
-from encourage.prompts.conversation_handler import ConversationHandler
-from encourage.utils.file_manager import FileManager
+from encourage.handler import ConversationHandler
+from encourage.llm import ChatInferenceRunner, OpenAIChatInferenceRunner
+from encourage.utils import FileManager
 from hydra.core.config_store import ConfigStore
 from vllm import LLM, SamplingParams
 
@@ -22,9 +19,7 @@ cs = ConfigStore.instance()
 cs.store(name="task_name", node=Config)
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -43,6 +38,7 @@ def get_inference_runner(cfg: Config, sampling_params: SamplingParams):
 
 @hydra.main(version_base=None, config_path="conf", config_name="defaults")
 def main(cfg: Config) -> None:
+    """Main function to run the conversation handler."""
     load_dotenv(dotenv_path=Path("../.env"))
     run = wandb.init(
         entity=cfg.wandb.entity,
@@ -66,7 +62,7 @@ def main(cfg: Config) -> None:
         runner, sys_prompts, ["How are you?"], template_name="prompt/test_template.j2"
     )
     responses = handler.run()
-    FileManager(cfg.output_file_path).dump_json(responses.to_output())
+    FileManager(cfg.output_file_path + "inference_log.json").dump_json(responses.to_output())
 
     run.finish()
 
