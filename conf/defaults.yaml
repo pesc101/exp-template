@@ -1,7 +1,7 @@
 # conf/config.yaml
 hydra:
   run:
-    dir: outputs/${now:%H:%M_%d-%m}_${model.model_name_short}
+    dir: outputs/${now:%y-%m-%d_%H:%M}_${model.model_name_short}
 
 defaults:
   - model: llama
@@ -10,6 +10,6 @@ defaults:
 
 subset: ""
 sys_prompt_path: prompt/sys_prompts/default.txt
-output_file_path: outputs/${now:%H:%M_%d-%m}_${model.model_name_short}/inference_log.json
+output_file_path: outputs/${now:%y-%m-%d_%H:%M}_${model.model_name_short}/inference_log.json
 template_name: prompt/llama3.1_rag.j2
 debug: False
