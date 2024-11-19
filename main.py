@@ -69,7 +69,9 @@ def main(cfg: Config) -> None:
                 last_user_content = item["content"]
         last_user_contents.append(last_user_content)
 
-    context: list[dict[str, str]] = [{"content": ctx[0]["text"]} for ctx in dataset.ctxs]
+    context: list[dict[str, list]] = [
+        {"contexts": [{"content": ctx[0]["text"]}]} for ctx in dataset.ctxs
+    ]
     meta_data = [{"reference_answer": answer[0]} for answer in dataset.answers]
 
     prompt_collection = PromptCollection.create_prompts(
@@ -119,7 +121,7 @@ def main(cfg: Config) -> None:
 
     results = {}
     for metric in metrics:
-        print(f"Calculate {metric}")
+        print(f"Calculate: {metric.name}")
         results[metric.name] = metric(responses)
 
     print("=" * 30 + "\n" + "Evaluation report" + "\n" + "=" * 30)
