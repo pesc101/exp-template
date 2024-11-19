@@ -6,7 +6,21 @@ import logging
 import hydra
 import omegaconf
 from encourage.llm import BatchInferenceRunner
-from encourage.metrics import BLEU, ROUGE, GeneratedAnswerLength, ReferenceAnswerLength
+from encourage.metrics import (
+    BLEU,
+    F1,
+    GLEU,
+    ROUGE,
+    AnswerRelevance,
+    AnswerSimilarity,
+    ContextLength,
+    ContextRecall,
+    ExactMatch,
+    GeneratedAnswerLength,
+    NonAnswerCritic,
+    ReferenceAnswerLength,
+)
+from encourage.metrics.metric import Metric
 from encourage.prompts import PromptCollection
 from encourage.utils.file_manager import FileManager
 from hydra.core.config_store import ConfigStore
@@ -55,7 +69,7 @@ def main(cfg: Config) -> None:
                 last_user_content = item["content"]
         last_user_contents.append(last_user_content)
 
-    context = [{"contexts": {"content": ctx[0]["text"]}} for ctx in dataset.ctxs]
+    context: list[dict[str, str]] = [{"content": ctx[0]["text"]} for ctx in dataset.ctxs]
     meta_data = [{"reference_answer": answer[0]} for answer in dataset.answers]
 
     prompt_collection = PromptCollection.create_prompts(
@@ -83,16 +97,24 @@ def main(cfg: Config) -> None:
     json_dump = [response.to_dict() for response in responses.response_data]
     FileManager(cfg.output_file_path).dump_json(json_dump)
 
-    metrics = [
+    metrics: list[Metric] = [
+        AnswerRelevance(runner=runner),
+        AnswerSimilarity(model_name="all-mpnet-base-v2"),
+        NonAnswerCritic(runner=runner),
+        ContextRecall(runner=runner),
         GeneratedAnswerLength(),
         ReferenceAnswerLength(),
-        # ContextLength(),
+        ContextLength(),
         BLEU(),
+        GLEU(),
         ROUGE(rouge_type="rouge1"),
         ROUGE(rouge_type="rouge2"),
         ROUGE(rouge_type="rougeLsum"),
+        ExactMatch(),
+        F1(),
+        # AnswerFaithfulness(runner=runner),
         # ContextPrecision(runner=runner),
-        # ContextRecall(runner=runner),
+        # MeanReciprocalRank(),
     ]
 
     results = {}
