@@ -1,34 +1,39 @@
 """Main script to run the evaluation pipeline."""
 
-import datetime
 import logging
+import uuid
 
 import hydra
-import omegaconf
+import mlflow
+import pandas as pd
 from encourage.llm import BatchInferenceRunner
 from encourage.metrics import (
     BLEU,
     F1,
     GLEU,
     ROUGE,
-    AnswerRelevance,
     AnswerSimilarity,
     ContextLength,
     ContextRecall,
     ExactMatch,
     GeneratedAnswerLength,
+    MeanReciprocalRank,
     NonAnswerCritic,
     ReferenceAnswerLength,
 )
 from encourage.metrics.metric import Metric
 from encourage.prompts import PromptCollection
+from encourage.prompts.context import Context, Document
+from encourage.prompts.meta_data import MetaData
 from encourage.utils.file_manager import FileManager
+from encourage.utils.tracing import enable_mlflow_tracing
+from encourage.vector_store import ChromaClient
 from hydra.core.config_store import ConfigStore
 from vllm import LLM, SamplingParams
 
-import wandb
 from config import Config
 from src.data.hf import HuggingFaceDataset
+from src.utils.utils import flatten_dict, get_secret
 
 cs = ConfigStore.instance()
 cs.store(name="rag-eval", node=Config)
@@ -38,19 +43,54 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 
+def prepare_contexts(df: pd.DataFrame) -> list[Context]:
+    """Prepare contexts for the QA dataset."""
+    df = df.drop_duplicates(subset=["context_text", "context_id"])
+    meta_datas = []
+    for i in range(len(df)):
+        meta_data = MetaData(tags={"messages": "test_meta_data"})
+        meta_datas.append(meta_data)
+    return Context.from_documents(
+        df["context_text"].tolist(), meta_datas=meta_datas, ids=df["context_id"].tolist()
+    )
+
+
+def init_db(
+    collection_name: str,
+    contexts: list[Context],
+) -> ChromaClient:
+    """Initialize the database with the contexts."""
+    chroma_client = ChromaClient()
+    chroma_client.create_collection(collection_name, overwrite=True)
+    chroma_client.insert_documents(collection_name, vector_store_document=contexts)
+    return chroma_client
+
+
+def get_contexts_from_db(
+    collection_name: str,
+    chroma_client: ChromaClient,
+    query_list: list[str],
+    top_k: int,
+    meta_datas: list[MetaData] = None,
+) -> list[Context]:
+    """Get the contexts from the database."""
+    if meta_datas is not None:
+        raise NotImplementedError(
+            "Handling of meta_datas is not implemented yet. Look here for more info: https://docs.trychroma.com/guides#querying-a-collection"
+        )
+    return [
+        Context.from_documents(chroma_client.query(collection_name, query, top_k))
+        for query in query_list
+    ]
+
+
 @hydra.main(version_base=None, config_path="conf", config_name="defaults")
 def main(cfg: Config) -> None:
     """Main function to run the evaluation pipeline."""
-    if not cfg.debug:
-        logger.setLevel(logging.DEBUG)
-        run = wandb.init(
-            entity=cfg.wandb.entity,
-            project=cfg.wandb.project,
-            settings=wandb.Settings(start_method="thread"),
-            config=omegaconf.OmegaConf.to_container(cfg, resolve=True),
-            name=f"{datetime.datetime.now().strftime('%H:%M_%d-%m')}_{cfg.model.model_name_short}",
-        )
-        logger.info(cfg)
+    enable_mlflow_tracing()
+
+    mlflow.set_tracking_uri(get_secret("uri"))
+    mlflow.set_experiment(experiment_name=cfg.mlflow.experiment_id)
 
     dataset = HuggingFaceDataset(
         cfg.dataset.dataset_path,
@@ -58,7 +98,10 @@ def main(cfg: Config) -> None:
         cfg.dataset.split,
         cfg.dataset.max_samples,
     )
-    sys_prompts = FileManager(cfg.sys_prompt_path).read()
+    dataset.raw_data["context_text"] = [ctx[0].get("text") for ctx in dataset.raw_data["ctxs"]]
+    unique_values = dataset.raw_data["context_text"].unique()
+    uuid_mapping = {val: str(uuid.uuid4()) for val in unique_values}
+    dataset.raw_data["context_id"] = dataset.raw_data["context_text"].map(uuid_mapping)
 
     # Collect last "content" for "user" from each sublist
     last_user_contents = []
@@ -69,16 +112,32 @@ def main(cfg: Config) -> None:
                 last_user_content = item["content"]
         last_user_contents.append(last_user_content)
 
-    context: list[dict[str, list]] = [
-        {"contexts": [{"content": ctx[0]["text"]}]} for ctx in dataset.ctxs
-    ]
-    meta_data = [{"reference_answer": answer[0]} for answer in dataset.answers]
+    ## Retrieve the context from the database
+    contexts = prepare_contexts(dataset.raw_data)
+    chroma_client = init_db(cfg.vector_db.collection_name, contexts)
+    contexts = get_contexts_from_db(
+        cfg.vector_db.collection_name, chroma_client, last_user_contents, cfg.vector_db.top_k
+    )
+    meta_datas = []
+    for i in range(len(dataset.raw_data)):
+        meta_data = MetaData(
+            {
+                "reference_answer": dataset.raw_data["answers"][i][0],
+                "reference_document": Document(
+                    id=str(dataset.raw_data["context_id"][i]),
+                    content=dataset.raw_data["ctxs"][i][0].get("text", ""),
+                ),
+            }
+        )
+        meta_datas.append(meta_data)
 
+    ## Create Prompts
+    sys_prompts = FileManager(cfg.sys_prompt_path).read()
     prompt_collection = PromptCollection.create_prompts(
         sys_prompts,
         user_prompts=last_user_contents,
-        contexts=context,
-        meta_datas=meta_data,
+        contexts=contexts,
+        meta_datas=meta_datas,
         template_name=cfg.template_name,
     )
 
@@ -95,42 +154,46 @@ def main(cfg: Config) -> None:
     )
     runner = BatchInferenceRunner(llm, sampling_params)
 
-    responses = runner.run(prompt_collection)
-    json_dump = [response.to_dict() for response in responses.response_data]
-    FileManager(cfg.output_file_path).dump_json(json_dump)
+    with mlflow.start_run():
+        mlflow.log_params(flatten_dict(cfg))
+        mlflow.log_params({"dataset_size": len(dataset.raw_data)})
 
-    metrics: list[Metric] = [
-        AnswerRelevance(runner=runner),
-        AnswerSimilarity(model_name="all-mpnet-base-v2"),
-        NonAnswerCritic(runner=runner),
-        ContextRecall(runner=runner),
-        GeneratedAnswerLength(),
-        ReferenceAnswerLength(),
-        ContextLength(),
-        BLEU(),
-        GLEU(),
-        ROUGE(rouge_type="rouge1"),
-        ROUGE(rouge_type="rouge2"),
-        ROUGE(rouge_type="rougeLsum"),
-        ExactMatch(),
-        F1(),
-        # AnswerFaithfulness(runner=runner),
-        # ContextPrecision(runner=runner),
-        # MeanReciprocalRank(),
-    ]
+        with mlflow.start_span(name="root"):
+            responses = runner.run(prompt_collection)
 
-    results = {}
-    for metric in metrics:
-        print(f"Calculate: {metric.name}")
-        results[metric.name] = metric(responses)
+        metrics: list[Metric] = [
+            GeneratedAnswerLength(),
+            ReferenceAnswerLength(),
+            ContextLength(),
+            MeanReciprocalRank(),
+            BLEU(),
+            GLEU(),
+            ROUGE(rouge_type="rouge1"),
+            ROUGE(rouge_type="rouge2"),
+            ROUGE(rouge_type="rougeLsum"),
+            ExactMatch(),
+            F1(),
+            AnswerSimilarity(model_name="all-mpnet-base-v2"),
+            ContextRecall(runner=runner),
+            NonAnswerCritic(runner=runner),
+            # AnswerFaithfulness(runner=runner),
+            # ContextPrecision(runner=runner),
+            # AnswerRelevance(runner=runner),
+        ]
 
-    print("=" * 30 + "\n" + "Evaluation report" + "\n" + "=" * 30)
-    for metric_name, metric_value in results.items():
-        print(f"{metric_name}: {metric_value.score}")
-        wandb.log({metric_name: metric_value.score})
+        results = {}
+        for metric in metrics:
+            print(f"Calculate: {metric.name}")
+            results[metric.name] = metric(responses)
 
-    if not cfg.debug:
-        run.finish()
+        print("=" * 30 + "\n" + "Evaluation report" + "\n" + "=" * 30)
+        for metric_name, metric_value in results.items():
+            print(f"{metric_name}: {metric_value.score}")
+            mlflow.log_metric(metric_name, metric_value.score)
+
+        json_dump = [flatten_dict(response.to_dict()) for response in responses.response_data]
+        FileManager(cfg.output_file_path).dump_json(json_dump)
+        mlflow.log_table(data=pd.DataFrame(json_dump), artifact_file="response.json")
 
 
 if __name__ == "__main__":

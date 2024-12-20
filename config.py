@@ -21,10 +21,19 @@ class Dataset:
 
 
 @dataclass
-class WandB:
-    project: str
-    entity: str
-    run_name: str
+class MLFlowConfig:
+    """MLFlow configuration."""
+
+    experiment_id: str
+    uri: str
+
+
+@dataclass
+class VectorDB:
+    """VectorDB configuration."""
+
+    collection_name: str
+    top_k: int
 
 
 @dataclass
@@ -32,7 +41,8 @@ class Config:
     debug: bool
     model: Model
     dataset: Dataset
-    wandb: WandB
+    mlflow: MLFlowConfig
+    vector_db: VectorDB
     sys_prompt_path: str
     tools_file_path: str
     output_file_path: str

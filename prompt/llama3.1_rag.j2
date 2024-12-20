@@ -6,7 +6,10 @@
 {{user_prompt}}<|eot_id|>
 <|start_header_id|>user<|end_header_id|>
 
-Context: 
-{{context}}
+Provided Documents:
+{% for document in documents %}
+{{document.content}}
+{% endfor %}
+
 <|eot_id|>
 <|start_header_id|>assistant<|end_header_id|>
