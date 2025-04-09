@@ -1,6 +1,6 @@
-# 🧪 SciVQA
+# 🧪 Exp Template
 
-This repository contains the code for the SciVQA project, which is a research project focused on scientific question answering using vision large language models (vLLMs).
+This repository contains the code for Exp Template.
 
 - 📦 **[uv](https://github.com/astral-sh/uv)**
   - A Python package manager replacing `pip` and `poetry`.
