@@ -4,11 +4,23 @@ hydra:
     dir: outputs/${now:%y-%m-%d_%H:%M}_${model.model_name_short}
 
 defaults:
-  - model: llama
-  - dataset: defaults
-  - wandb: defaults
+  - model: qwen2-7B
+  - dataset: scivqa
+  - mlflow: scivqa
+  - _self_
 
-subset: ""
-sys_prompt_path: "prompts/sys_prompts/default.txt"
-output_file_path: outputs/${now:%H:%M_%d-%m}_${model.model_name_short}
-template_name: prompts/test_template.j2
+metrics:
+  - F1
+  - BLEU:
+      n_grams: 1
+  - ROUGE:
+      rouge_type: rouge1
+  - ROUGE:
+      rouge_type: rougeL
+  - GeneratedAnswerLength
+  - ExactMatch
+
+output_folder: outputs/${now:%y-%m-%d_%H:%M}_${model.model_name_short}
+template_name: ./src/exp/prompts/templates/version_v1.j2
+base_url: http://localhost:${vllm_port}/v1/
+vllm_port: 18123

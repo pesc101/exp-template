@@ -5,6 +5,7 @@ from pathlib import Path
 
 import hydra
 import omegaconf
+import wandb
 from dotenv import load_dotenv
 from encourage.handler import ConversationHandler
 from encourage.llm import ChatInferenceRunner, OpenAIChatInferenceRunner
@@ -12,8 +13,7 @@ from encourage.utils import FileManager
 from hydra.core.config_store import ConfigStore
 from vllm import LLM, SamplingParams
 
-import wandb
-from config import Config
+from src.exp.evaluation.config import Config
 
 cs = ConfigStore.instance()
 cs.store(name="task_name", node=Config)

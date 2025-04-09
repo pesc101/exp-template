@@ -1,6 +1,6 @@
-# 🧪 Experiment Template
+# 🧪 SciVQA
 
-This repository is a template for running experiments using the following tools and libraries:
+This repository contains the code for the SciVQA project, which is a research project focused on scientific question answering using vision large language models (vLLMs).
 
 - 📦 **[uv](https://github.com/astral-sh/uv)**
   - A Python package manager replacing `pip` and `poetry`.
@@ -8,9 +8,9 @@ This repository is a template for running experiments using the following tools 
   - For project management.
 - ⚙️ **[hydra](https://hydra.cc)**
   - For flexible configuration management.
-- 📊 **[wandb](https://wandb.ai/site)**
+- 📊 **[mlflow](https://mlflow.org)**
   - For experiment tracking and visualization online.
-- 🤖 **encourage**
+- 🌱 **[encourage](https://github.com/uhh-hcds/encourage)**
   - A custom library for handling LLM inference, prompt handling, and utility functions.
 
 ---
@@ -22,32 +22,35 @@ This repository is a template for running experiments using the following tools 
 To initialize the environment using `uv`, run the following command:
 
 ```bash
+uv venv --python 3.12
+uv init
 uv sync
 ```
-
-### 📊 Weights & Biases (wandb)
-
-For using Weight & Biases you need to login to your account using the following command:
-
-```bash
-wandb login
-```
-
-There you have to enter your API key which you can find in your account settings.
 
 ## ⚡ Usage
 
 When using this template you have to declare all your configuration parameters in the `conf/defaults.yaml` file. Also modify the `conf/model/defaults.yaml` and `conf/data/defaults.yaml` files to fit your needs.
 
-To run an experiment you can use the following command:
+### Run LLM
+
+To run a LLM you can use config from the launch.json file. If you want to run it without it you can use the following command:
 
 ```bash
-uv run main.py
+ CUDA_VISIBLE_DEVICES=1 uv run start_vllm_server_as_process.py model=qwen2-7B  
 ```
 
-The output will be saved in the outputs folder. Each experiment generates a new timestamped folder containing:
+### Run Evaluation
+To run the execution of the model you can use the following command:
 
-- Configuration files (.hydra/)
-- Logs (main.log)
-- Inference output (inference_log.json)
+```bash
+uv run src/scivqa/evaluation/execution.py
+```
+
+If something broke in the evaluation you can use the following command to run the evaluation again:
+
+```bash
+uv run src/scivqa/evaluation/evaluate.py
+```
+
+But you have to change the `output_folder` in the `defaults.yaml` to the folder where the execution results are stored. 
 
