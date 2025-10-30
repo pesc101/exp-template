@@ -10,10 +10,10 @@ from encourage.llm import BatchInferenceRunner, Response, ResponseWrapper
 from encourage.metrics import Metric, MetricOutput
 from vllm import SamplingParams
 
+from exp.evaluation.config import Config
 from exp.evaluation.factory_helper import load_metrics
 from exp.utils.file_manager import FileManager
 from exp.utils.flatten_dict import flatten_dict
-from src.exp.evaluation.config import Config
 
 logger = logging.getLogger(__name__)
 config_path = str((Path(__file__).parents[3] / "conf").resolve())
