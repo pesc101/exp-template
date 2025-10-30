@@ -22,8 +22,7 @@ This repository contains the code for Exp Template.
 To initialize the environment using `uv`, run the following command:
 
 ```bash
-uv venv --python 3.12
-uv init
+uv venv --python 3.12p
 uv sync
 ```
 

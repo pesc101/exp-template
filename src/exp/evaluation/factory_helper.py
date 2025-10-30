@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional, Tuple
 from encourage.llm import BatchInferenceRunner
 from encourage.metrics import METRIC_REGISTRY, get_metric_from_registry
 from omegaconf import DictConfig, OmegaConf
-from pydantic import BaseModel
+from pydantic import BaseModel, create_model
 
 from exp.evaluation.config import Config
 

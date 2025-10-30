@@ -164,7 +164,7 @@ class FinQADatasetCollection:
         retrieval_query = self._generate_retrieval_queries()
         responses = rag_method_instance.run(
             runner,
-            sys_prompt["round1"],
+            sys_prompt,
             self.user_prompts,
             self.prompt_meta_data,
             retrieval_queries=retrieval_query,

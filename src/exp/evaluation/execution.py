@@ -16,6 +16,7 @@ from vllm import SamplingParams
 from exp.data.finqa_qa import FinQADatasetCollection
 from exp.evaluation.config import Config
 from exp.evaluation.evaluation import main as evaluation
+from exp.evaluation.factory_helper import get_response_format
 from exp.utils.file_manager import FileManager
 from exp.utils.flatten_dict import flatten_dict
 
@@ -29,15 +30,17 @@ def main(cfg: Config) -> None:
 
     mlflow.openai.autolog()
 
+    # Setup the inference runner and system prompt
     sampling_params = SamplingParams(
         temperature=cfg.model.temperature, max_tokens=cfg.model.max_tokens
     )
     runner = BatchInferenceRunner(sampling_params, cfg.model.model_name, base_url=cfg.base_url)
     sys_prompt = FileManager(cfg.dataset.sys_prompt_path).read()
 
-    ## Run the Inference
+    ## MLflow setup
     mlflow.set_tracking_uri(cfg.mlflow.uri)
     mlflow.set_experiment(experiment_name=cfg.mlflow.experiment_id)
+
     qa_dataset = load_dataset(cfg.dataset.name, split=cfg.dataset.split).to_pandas()
     dataset_obj = FinQADatasetCollection(
         qa_dataset, cfg.dataset.retrieval_query, cfg.dataset.meta_data_keys
@@ -47,9 +50,7 @@ def main(cfg: Config) -> None:
         mlflow.log_params(flatten_dict(cfg))
         mlflow.log_params({"dataset_size": len(qa_dataset)})
         mlflow.log_input(
-            mlflow.data.pandas_dataset.from_pandas(
-                qa_dataset.drop(columns=["answer_options"]), name=cfg.dataset.name
-            ),
+            mlflow.data.pandas_dataset.from_pandas(qa_dataset, name=cfg.dataset.name),
             context="inference",
         )
 
