@@ -5,8 +5,8 @@ hydra:
 
 defaults:
   - model: gemma3-27b
-  - dataset: ragtopia_finqa
-  - mlflow: ragtopia
+  - dataset: finqa
+  - mlflow: finqa
   - vector_db: chroma
   - rag: known_context
   - _self_
@@ -42,4 +42,4 @@ metrics:
       lang: en
 
 base_url: http://localhost:${vllm_port}/v1/
-vllm_port: 18123
+vllm_port: 18120
