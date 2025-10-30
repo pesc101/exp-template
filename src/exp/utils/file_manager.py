@@ -14,7 +14,7 @@ class PydanticEncoder(json.JSONEncoder):
     This custom encoder converts pydantic objects to plain python dict before json serialization.
     """
 
-    def default(self, obj: Any) -> Any:
+    def default(self, obj: Any) -> Any:  # type: ignore
         """Convert Pydantic models to dict before serializing to JSON."""
         if isinstance(obj, BaseModel):
             return obj.model_dump()

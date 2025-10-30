@@ -6,7 +6,7 @@ import subprocess
 import hydra
 from dotenv import load_dotenv
 
-from src.exp.evaluation.config import Config
+from exp.evaluation.config import Config
 
 # Load environment variables from .env file
 load_dotenv(".env")
@@ -41,11 +41,6 @@ def main(cfg: Config) -> None:
         "auto",
         "--api-key",
         API_KEY,
-        "--enable-auto-tool-choice",
-        "--allowed-local-media-path",
-        f"{cfg.dataset.input_dir}/{cfg.dataset.split}/",
-        "--tool-call-parser",
-        cfg.model.tool_call_parser,
         "--gpu-memory-utilization",
         str(cfg.model.gpu_memory_utilization),
         "--port",
@@ -54,9 +49,17 @@ def main(cfg: Config) -> None:
         str(cfg.model.max_model_len),
         "--tensor-parallel-size",
         str(cfg.model.tensor_parallel_size),
-        "--quantization",
-        str(cfg.model.quantization),
     ]
+
+    # Add optional arguments if present in config
+    if getattr(cfg.model, "enable_auto_tool_choice", False):
+        vllm_command.append("--enable-auto-tool-choice")
+
+    if getattr(cfg.model, "tool_call_parser", None):
+        vllm_command.extend(["--tool-call-parser", cfg.model.tool_call_parser])
+
+    if getattr(cfg.model, "quantization", None):
+        vllm_command.extend(["--quantization", str(cfg.model.quantization)])
 
     # Execute the serve command
     try:

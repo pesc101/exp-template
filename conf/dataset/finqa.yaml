@@ -1,0 +1,24 @@
+defaults:
+  - _default
+  - _self_
+
+name: "G4KMU/finqa-german"
+runner_name: "G4KMU/finqa"
+split: "dev_generated"
+meta_data_keys:
+  - report_year
+  - page_number
+  - company_symbol
+  - company_name
+  - company_sector
+  - company_industry
+  - company_headquarters
+  - company_cik
+  - company_founded
+retrieval_query: "Given a question about a company, retrieve relevant passages that answer the query."
+sys_prompt_path: ./src/exp/prompts/sys_prompts/default.txt
+template_name: ./src/exp/prompts/templates/version_v1.j2
+response_format:
+  reasoning_steps: list[str]
+  final_formula: str
+  computed_formula: str

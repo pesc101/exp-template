@@ -1,6 +1,6 @@
 """Configuration dataclasses for the hydra modules."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Union
 
 
@@ -26,8 +26,14 @@ class Dataset:
 
     name: str
     split: str
+    subset: str
     sys_prompt_path: str
-    input_dir: str
+    runner_name: str = ""
+    meta_data_keys: list[str] = field(default_factory=list)
+    retrieval_query: str = ""
+    template_name: str = ""
+    document_percentage: float = 1.0
+    response_format: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -39,14 +45,35 @@ class MLFlowConfig:
 
 
 @dataclass
+class VectorDB:
+    """VectorDB configuration."""
+
+    collection_name: str
+    top_k: int
+    embedding_function: str = "default"
+
+
+@dataclass
+class RAGConfig:
+    """RAG configuration."""
+
+    method: str = ""
+    prompt: str | None = None
+    retrieval_only: bool = False
+    template_name: str = ""
+    model: str = ""
+    vllm_port: int = 18123
+
+
+@dataclass
 class Config:
     """Configuration dataclass for the hydra modules."""
 
     model: Model
     dataset: Dataset
     mlflow: MLFlowConfig
+    vector_db: VectorDB
+    rag: RAGConfig
     metrics: list[Union[str, dict[str, dict[str, str]]]]
-    output_folder: str
-    template_name: str
     vllm_port: int
     base_url: str

@@ -1,0 +1,11 @@
+name: ""
+runner_name: ""
+split: ""
+subset: null
+meta_data_keys: []
+retrieval_query: ""
+sys_prompt_path: ./src/g4k/prompts/sys_prompts/finqa_new.yaml
+template_name: ./src/g4k/prompts/templates/finqa_doc.j2
+document_percentage: 1
+response_format:
+  reasoning_steps: list[str]

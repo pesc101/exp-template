@@ -1,8 +1,13 @@
 """Helper functions for the evaluation factory."""
 
+from typing import Any, Dict, Optional, Tuple
+
 from encourage.llm import BatchInferenceRunner
 from encourage.metrics import METRIC_REGISTRY, get_metric_from_registry
 from omegaconf import DictConfig, OmegaConf
+from pydantic import BaseModel
+
+from exp.evaluation.config import Config
 
 
 def load_metrics(
@@ -29,3 +34,14 @@ def load_metrics(
 
         metrics.append(metric)
     return metrics
+
+
+def get_response_format(cfg: Config) -> Optional[type[BaseModel]]:
+    """Get the response model from the config."""
+    if not hasattr(cfg, "dataset") or not hasattr(cfg.dataset, "response_format"):
+        return None
+    fields: Dict[str, Tuple[Any, Any]] = {
+        k: (eval(v) if isinstance(v, str) else v, ...)
+        for k, v in cfg.dataset.response_format.items()
+    }
+    return create_model("ResponseModel", **fields)

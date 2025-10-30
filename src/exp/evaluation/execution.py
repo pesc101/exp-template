@@ -3,18 +3,17 @@
 from pathlib import Path
 
 import hydra
-import litellm
+import hydra.core.hydra_config
 import mlflow
 import mlflow.data.pandas_dataset
 import pandas as pd
 from datasets import load_dataset
 from dotenv import load_dotenv
-from encourage.llm import BatchInferenceRunner
-from encourage.prompts import PromptCollection
-from encourage.prompts.context import Context
-from encourage.prompts.meta_data import MetaData
+from encourage.llm import BatchInferenceRunner, ResponseWrapper
+from encourage.rag import RAGFactory
 from vllm import SamplingParams
 
+from data.finqa_qa import FinQADatasetCollection
 from exp.evaluation.config import Config
 from exp.evaluation.evaluation import main as evaluation
 from exp.utils.file_manager import FileManager
@@ -23,43 +22,11 @@ from exp.utils.flatten_dict import flatten_dict
 config_path = str((Path(__file__).parents[3] / "conf").resolve())
 
 
-def prepare_data(df: pd.DataFrame) -> tuple[list, list]:
-    """Prepare data for the inference runner."""
-    meta_datas = []
-    contexts = []
-    for _, row in df.iterrows():
-        meta_data = MetaData(
-            {
-                "figure_id": row["figure_id"],
-                "image_path": row["image_file"],
-                "question": row["question"],
-                "reference_answer": row["answer"],
-                "caption": row["caption"],
-                "qa_pair_type": row["qa_pair_type"],
-                "categories": row["categories"],
-            }
-        )
-        meta_datas.append(meta_data)
-        context = Context.from_prompt_vars(
-            {
-                "qa_pair_type": row["qa_pair_type"],
-                "answer_options": {
-                    k: v for d in row["answer_options"] for k, v in d.items() if v is not None
-                },
-            }
-        )
-        contexts.append(context)
-    return meta_datas, contexts
-
-
 @hydra.main(version_base=None, config_path=config_path, config_name="defaults")
 def main(cfg: Config) -> None:
     """Main function for evaluation of QA datasets."""
-    # Load dataset from Huggingface
     load_dotenv(".env")
-    qa_dataset = load_dataset(cfg.dataset.name, split=cfg.dataset.split).to_pandas()
 
-    litellm._logging._disable_debugging()
     mlflow.openai.autolog()
 
     sampling_params = SamplingParams(
@@ -71,6 +38,10 @@ def main(cfg: Config) -> None:
     ## Run the Inference
     mlflow.set_tracking_uri(cfg.mlflow.uri)
     mlflow.set_experiment(experiment_name=cfg.mlflow.experiment_id)
+    qa_dataset = load_dataset(cfg.dataset.name, split=cfg.dataset.split).to_pandas()
+    dataset_obj = FinQADatasetCollection(
+        qa_dataset, cfg.dataset.retrieval_query, cfg.dataset.meta_data_keys
+    )
 
     with mlflow.start_run():
         mlflow.log_params(flatten_dict(cfg))
@@ -83,33 +54,37 @@ def main(cfg: Config) -> None:
         )
 
         with mlflow.start_span(name="root"):
-            image_paths = [
-                [f"{cfg.dataset.input_dir}/{cfg.dataset.split}/{qa_dataset['image_file'][i]}"]
-                for i in range(len(qa_dataset))
-            ]
-
-            meta_datas, contexts = prepare_data(qa_dataset)
-
-            prompt_collection = PromptCollection.create_image_prompts(
-                sys_prompts=sys_prompt,
-                user_prompts=qa_dataset["question"].tolist(),
-                image_paths=image_paths,
-                meta_datas=meta_datas,
-                contexts=contexts,
-                template_name=cfg.template_name,
+            rag_config = {
+                **cfg.rag,
+                "context_collection": dataset_obj.get_context_collection(),
+                "collection_name": cfg.vector_db.collection_name,
+                "embedding_function": cfg.vector_db.embedding_function,
+                "top_k": cfg.vector_db.top_k,
+                "runner": runner,
+                "template_name": cfg.dataset.template_name,
+            }
+            rag_method_instance = RAGFactory.create(rag_config)
+            responses: ResponseWrapper = dataset_obj.run(
+                rag_method_instance,
+                runner,
+                sys_prompt,
+                cfg.dataset.template_name,
+                response_format=get_response_format(cfg),
             )
-            responses = runner.run(prompt_collection)
 
-        # Save the output to hydra folder0
         json_dump = [response.to_dict() for response in responses.response_data]
-        FileManager(cfg.output_folder + "/inference_log.json").dump_json(
-            json_dump, pydantic_encoder=True
-        )
+        FileManager(
+            hydra.core.hydra_config.HydraConfig.get().runtime.output_dir + "/inference_log.json"
+        ).dump_json(json_dump)
         json_dump = [flatten_dict(response.to_dict()) for response in responses.response_data]
 
         active_run = mlflow.active_run()
         run_name = active_run.info.run_name if active_run else "responses"
-        mlflow.log_table(data=pd.DataFrame(json_dump), artifact_file=f"{run_name}.json")
+
+        try:
+            mlflow.log_table(data=pd.DataFrame(json_dump), artifact_file=f"{run_name}.json")
+        except Exception as e:
+            print(f"Failed to log table to MLflow: {e}")
 
         # Evaluate the retrieval
         evaluation(cfg)

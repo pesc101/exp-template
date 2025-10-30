@@ -1,0 +1,6 @@
+method: ""
+prompt: ""
+retrieval_only: False
+template_name: ./src/g4k/prompts/templates/finqa_doc.j2
+model: ""
+vllm_port: 0

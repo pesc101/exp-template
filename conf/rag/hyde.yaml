@@ -1,0 +1,11 @@
+defaults:
+  - _default
+  - _self_
+
+method: Hyde
+prompt: |
+  You are a financial analyst. Given a financial question, generate a detailed and realistic hypothetical financial document using typical language and structure found in financial reports and documents. 
+  Your answer may include plausible numerical values, trends, and terminology, as if it came from an actual financial report. 
+  The goal is to produce a text that matches the type of content found in financial documents containing both text and tables, to aid dense retrieval.
+model: "google/gemma-3-27b-it"
+vllm_port: 18123

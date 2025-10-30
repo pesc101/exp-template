@@ -1,0 +1,7 @@
+defaults:
+  - _default
+  - _self_
+
+method: Reranker
+reranker_model: "jinaai/jina-reranker-v3"
+rerank_ratio: 1.0

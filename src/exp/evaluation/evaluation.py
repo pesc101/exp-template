@@ -4,8 +4,9 @@ import logging
 from pathlib import Path
 
 import hydra
+import hydra.core.hydra_config
 import mlflow
-from encourage.llm import BatchInferenceRunner, Response
+from encourage.llm import BatchInferenceRunner, Response, ResponseWrapper
 from encourage.metrics import Metric, MetricOutput
 from vllm import SamplingParams
 
@@ -26,20 +27,20 @@ def main(cfg: Config) -> None:
     mlflow.set_experiment(experiment_name=cfg.mlflow.experiment_id)
 
     # Run the evaluation with MLflow tracking
-    if mlflow.active_run().info.run_id if mlflow.active_run() else None:  # type: ignore
+    if mlflow.active_run().info.run_id if mlflow.active_run() else False:  # type: ignore
         evaluation(cfg)
     else:
-        with mlflow.start_run():
+        with mlflow.start_run():  # ty: ignore
             evaluation(cfg)
 
 
 def evaluation(cfg: Config) -> None:
     """Evaluate the QA results with MLflow tracking."""
     flat_config = flatten_dict(cfg)
-    mlflow.log_params(flat_config)
+    mlflow.log_params(flat_config)  # ty: ignore
 
     with mlflow.start_span(name="loading_results"):
-        results_path = Path(cfg.output_folder)
+        results_path = Path(hydra.core.hydra_config.HydraConfig.get().runtime.output_dir)
         if not results_path.exists() or not results_path.is_dir():
             raise ValueError(f"Results folder not found: {results_path}")
 
@@ -58,14 +59,14 @@ def evaluation(cfg: Config) -> None:
     metrics: list[Metric] = load_metrics(cfg.metrics, runner)
     metrics_log = []
     for metric in metrics:
-        result: MetricOutput = metric(responses)
+        result: MetricOutput = metric(ResponseWrapper(responses))
         metrics_log.append({metric.name: result.to_dict()})
 
-        mlflow.log_metric(metric.name, result.score)
+        mlflow.log_metric(metric.name, result.score)  # ty: ignore
 
-    FileManager(cfg.output_folder + "/metrics_log.json").dump_json(
-        metrics_log, pydantic_encoder=True
-    )
+    FileManager(
+        hydra.core.hydra_config.HydraConfig.get().runtime.output_dir + "/metrics_log.json"
+    ).dump_json(metrics_log, pydantic_encoder=True)
 
 
 if __name__ == "__main__":
