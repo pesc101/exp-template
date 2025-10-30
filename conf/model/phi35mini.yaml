@@ -1,0 +1,8 @@
+defaults:
+  - _default
+  - _self_
+
+model_name: "microsoft/Phi-3.5-mini-instruct"
+model_name_short: "phi-3.5-mini"
+tool_call_parser: llama3_json
+max_model_len: 2000

@@ -29,3 +29,12 @@ lint.ignore = [
     "B008", # Do not perform function calls in argument defaults
     "B905", # `zip()` without an explicit `strict=` parameter
 ]
+
+
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["exp*"]

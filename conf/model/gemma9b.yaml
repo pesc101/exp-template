@@ -1,0 +1,7 @@
+defaults:
+  - _default
+  - _self_
+
+model_name: "google/gemma-2-9b-it"
+model_name_short: "gemma-2-9b"
+max_model_len: 3728

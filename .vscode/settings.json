@@ -1,3 +1,5 @@
 {
-    "python-envs.pythonProjects": []
+    "python.defaultInterpreterPath": "/ltstorage/home/strich/exp-template/.venv/bin/python",
+    "python.terminal.activateEnvironment": true,
+    "terminal.integrated.shellIntegration.enabled": true
 }

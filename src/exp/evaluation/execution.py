@@ -13,7 +13,7 @@ from encourage.llm import BatchInferenceRunner, ResponseWrapper
 from encourage.rag import RAGFactory
 from vllm import SamplingParams
 
-from data.finqa_qa import FinQADatasetCollection
+from exp.data.finqa_qa import FinQADatasetCollection
 from exp.evaluation.config import Config
 from exp.evaluation.evaluation import main as evaluation
 from exp.utils.file_manager import FileManager
